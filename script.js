@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LIVREXPRESS - LUBUMBASHI
  * Interactions JavaScript & Simulateur de course en direct
  */
@@ -213,13 +213,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const estimate = calculateEstimatedPrice();
             if (!estimate) return;
 
-            const phoneNumber = '243970000123';
-            const message = `Bonjour LivreXpress Lubumbashi ! 👋%0A%0A` +
+            const phoneNumber = '243848061886';
+            const message = `Bonjour LivreXpress Lubumbashi !%0A` +
                 `Je souhaite commander une course estimée via votre site :%0A` +
-                `📍 *Départ* : ${encodeURIComponent(estimate.depText)}%0A` +
-                `🏁 *Arrivée* : ${encodeURIComponent(estimate.arrText)}%0A` +
-                `📦 *Colis* : ${encodeURIComponent(estimate.packageText)}%0A` +
-                `💰 *Tarif estimé* : ${estimate.priceCdf.toLocaleString('fr-FR')} CDF (~${estimate.priceUsd} $)%0A%0A` +
+                ` *Départ* : ${encodeURIComponent(estimate.depText)}%0A` +
+                ` *Arrivée* : ${encodeURIComponent(estimate.arrText)}%0A` +
+                ` *Colis* : ${encodeURIComponent(estimate.packageText)}%0A` +
+                ` *Tarif estimé* : ${estimate.priceCdf.toLocaleString('fr-FR')} CDF (~${estimate.priceUsd} $)%0A%0A` +
                 `Merci de me confirmer la disponibilité d'un coursier.`;
 
             const waUrl = `https://wa.me/${phoneNumber}?text=${message}`;
@@ -274,13 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
 
                 if (shouldOpenWhatsApp) {
-                    const phoneNumber = '243970000123';
+                    const phoneNumber = '243848061886';
                     const waText = `Bonjour LivreXpress !%0A%0A` +
                         `Nouvelle commande express envoyée depuis le site :%0A` +
-                        `👤 *Nom* : ${encodeURIComponent(name)}%0A` +
-                        `📞 *Téléphone* : ${encodeURIComponent(phone)}%0A` +
-                        `📍 *Trajet* : ${encodeURIComponent(route)}%0A` +
-                        `📝 *Détails* : ${encodeURIComponent(message)}`;
+                        ` *Nom* : ${encodeURIComponent(name)}%0A` +
+                        ` *Téléphone* : ${encodeURIComponent(phone)}%0A` +
+                        ` *Trajet* : ${encodeURIComponent(route)}%0A` +
+                        ` *Détails* : ${encodeURIComponent(message)}`;
 
                     window.open(`https://wa.me/${phoneNumber}?text=${waText}`, '_blank');
                 }
@@ -320,4 +320,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log('LivreXpress Lubumbashi - Plateforme prête et initialisée.');
 });
+
 
