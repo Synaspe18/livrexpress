@@ -1,6 +1,7 @@
-﻿/**
+/**
  * LIVREXPRESS - LUBUMBASHI
  * Interactions JavaScript & Simulateur de course en direct
+ * Version Sécurisée (Protection XSS, Reverse Tabnabbing, Honeypot Anti-Bot & Validation RDC)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -117,11 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const calcTime = document.getElementById('calcTime');
     const btnOrderCalculated = document.getElementById('btnOrderCalculated');
 
-    // Taux de conversion approximatif : 1 USD = 2 800 CDF
+    // Taux de conversion indicatif : 1 USD = 2 800 CDF
     const EXCHANGE_RATE = 2800;
 
-    // Matrice de distances relatives entre zones de Lubumbashi (indices de base en CDF)
-    // 0: Centre, 1: Golf, 2: Bel-Air, 3: Kampemba, 4: Kenya, 5: Katuba, 6: Ruashi, 7: Annexe
+    // Matrice de pondération des distances de Lubumbashi
     const zoneWeights = {
         'centre': 1,
         'golf': 2,
@@ -146,17 +146,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const arr = communeArrivee.value;
         const pType = packageType.value;
 
-        let basePrice = 5000; // Tarif de base minimal pour Lubumbashi
+        let basePrice = 5000; // Tarif de base minimal Lubumbashi
         let estimatedMinutesMin = 20;
         let estimatedMinutesMax = 35;
 
         if (dep === arr) {
-            // Même commune ou même zone
+            // Même quartier
             basePrice = 4000;
             estimatedMinutesMin = 15;
             estimatedMinutesMax = 25;
         } else {
-            const distanceFactor = Math.abs(zoneWeights[dep] - zoneWeights[arr]);
+            const distanceFactor = Math.abs((zoneWeights[dep] || 1) - (zoneWeights[arr] || 1));
             if (distanceFactor === 0) {
                 basePrice = 5500;
                 estimatedMinutesMin = 20;
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Ajout selon le type de colis
+        // Supplément selon le type de colis
         const packageInfo = packageExtras[pType] || packageExtras['express'];
         const finalPriceCdf = basePrice + packageInfo.extraCdf;
         const finalPriceUsd = (finalPriceCdf / EXCHANGE_RATE).toFixed(2);
@@ -184,10 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const finalTimeMin = estimatedMinutesMin + packageInfo.timeOffset;
         const finalTimeMax = estimatedMinutesMax + packageInfo.timeOffset;
 
-        // Mise à jour de l'affichage
-        calcPriceCdf.textContent = `${finalPriceCdf.toLocaleString('fr-FR')} CDF`;
-        calcPriceUsd.textContent = `(env. ${finalPriceUsd} $)`;
-        calcTime.innerHTML = `<i class="fa-solid fa-clock"></i> Temps moyen estimé : <strong>${finalTimeMin} - ${finalTimeMax} min</strong>`;
+        // Mise à jour de l'affichage sécurisée
+        if (calcPriceCdf) calcPriceCdf.textContent = `${finalPriceCdf.toLocaleString('fr-FR')} CDF`;
+        if (calcPriceUsd) calcPriceUsd.textContent = `(env. ${finalPriceUsd} $)`;
+        if (calcTime) {
+            calcTime.innerHTML = `<i class="fa-solid fa-clock"></i> Temps moyen estimé : <strong>${finalTimeMin} - ${finalTimeMax} min</strong>`;
+        }
 
         return {
             depText: communeDepart.options[communeDepart.selectedIndex].text,
@@ -198,12 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Écouteurs de changement pour le simulateur
+    // Écouteurs pour le simulateur
     if (communeDepart && communeArrivee && packageType) {
         communeDepart.addEventListener('change', calculateEstimatedPrice);
         communeArrivee.addEventListener('change', calculateEstimatedPrice);
         packageType.addEventListener('change', calculateEstimatedPrice);
-        // Calcul initial
         calculateEstimatedPrice();
     }
 
@@ -214,21 +215,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!estimate) return;
 
             const phoneNumber = '243848061886';
-            const message = `Bonjour LivreXpress Lubumbashi !%0A` +
+            const message = `Bonjour LivreXpress Lubumbashi ! 👋%0A%0A` +
                 `Je souhaite commander une course estimée via votre site :%0A` +
-                ` *Départ* : ${encodeURIComponent(estimate.depText)}%0A` +
-                ` *Arrivée* : ${encodeURIComponent(estimate.arrText)}%0A` +
-                ` *Colis* : ${encodeURIComponent(estimate.packageText)}%0A` +
-                ` *Tarif estimé* : ${estimate.priceCdf.toLocaleString('fr-FR')} CDF (~${estimate.priceUsd} $)%0A%0A` +
+                `📍 *Départ* : ${encodeURIComponent(estimate.depText)}%0A` +
+                `🏁 *Arrivée* : ${encodeURIComponent(estimate.arrText)}%0A` +
+                `📦 *Colis* : ${encodeURIComponent(estimate.packageText)}%0A` +
+                `💰 *Tarif estimé* : ${estimate.priceCdf.toLocaleString('fr-FR')} CDF (~${estimate.priceUsd} $)%0A%0A` +
                 `Merci de me confirmer la disponibilité d'un coursier.`;
 
             const waUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-            window.open(waUrl, '_blank');
+            // Sécurité anti-reverse tabnabbing sur window.open
+            window.open(waUrl, '_blank', 'noopener,noreferrer');
         });
     }
 
     // =========================================================================
-    // 5. FORMULAIRE DE CONTACT & RÉSERVATION DU FOOTER
+    // 5. FORMULAIRE DE CONTACT & RÉSERVATION DU FOOTER (SÉCURISÉ)
     // =========================================================================
     const contactForm = document.getElementById('contactForm');
     const formSuccessToast = document.getElementById('formSuccessToast');
@@ -237,55 +239,68 @@ document.addEventListener('DOMContentLoaded', () => {
         contactForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
+            // 1. Protection Anti-Bot (Honeypot)
+            const honeypot = document.getElementById('company_website_url_hp');
+            if (honeypot && honeypot.value.trim() !== '') {
+                // Robot détecté : on avorte l'opération silencieusement
+                console.warn('Bot détecté via le honeypot.');
+                contactForm.reset();
+                return;
+            }
+
             const name = document.getElementById('clientName').value.trim();
             const phone = document.getElementById('clientPhone').value.trim();
             const route = document.getElementById('clientRoute').value.trim();
             const message = document.getElementById('clientMessage').value.trim();
 
             if (!name || !phone || !route) {
-                alert('Veuillez remplir au moins votre nom, numéro et le trajet souhaité.');
+                alert('Veuillez remplir votre nom, numéro de téléphone et le trajet.');
                 return;
             }
 
-            // Bouton état de chargement
+            // 2. Validation stricte du numéro de téléphone en RDC
+            const cleanPhone = phone.replace(/[\s\-\.]+/g, '');
+            const rdcPhoneRegex = /^((\+243)|0)[89][0-9]{8}$/;
+            if (!rdcPhoneRegex.test(cleanPhone)) {
+                alert('Veuillez saisir un numéro de téléphone valide en RDC (ex: 0848061886 ou +243848061886).');
+                return;
+            }
+
+            // État de chargement du bouton
             const submitBtn = contactForm.querySelector('.btn-submit');
             const originalBtnHtml = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Traitement en cours...`;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Traitement sécurisé...`;
 
             setTimeout(() => {
-                // Rétablir le bouton
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHtml;
 
-                // Afficher le toast de succès
+                // Affichage du toast de confirmation
                 if (formSuccessToast) {
                     formSuccessToast.classList.remove('hidden');
-                    
-                    // Masquer après 6 secondes
                     setTimeout(() => {
                         formSuccessToast.classList.add('hidden');
                     }, 6000);
                 }
 
-                // Proposer l'ouverture immédiate sur WhatsApp pour confirmation directe
+                // Proposition d'ouverture WhatsApp sécurisée
                 const shouldOpenWhatsApp = confirm(
-                    `Merci ${name} ! Votre demande a été enregistrée.\n\nSouhaitez-vous également l'envoyer directement sur notre WhatsApp pour une attribution de livreur en 3 minutes ?`
+                    `Merci ${name} ! Votre demande a été enregistrée avec succès.\n\nSouhaitez-vous également l'envoyer directement sur notre WhatsApp pour une attribution de livreur en 3 minutes ?`
                 );
 
                 if (shouldOpenWhatsApp) {
                     const phoneNumber = '243848061886';
                     const waText = `Bonjour LivreXpress !%0A%0A` +
                         `Nouvelle commande express envoyée depuis le site :%0A` +
-                        ` *Nom* : ${encodeURIComponent(name)}%0A` +
-                        ` *Téléphone* : ${encodeURIComponent(phone)}%0A` +
-                        ` *Trajet* : ${encodeURIComponent(route)}%0A` +
-                        ` *Détails* : ${encodeURIComponent(message)}`;
+                        `👤 *Nom* : ${encodeURIComponent(name)}%0A` +
+                        `📞 *Téléphone* : ${encodeURIComponent(cleanPhone)}%0A` +
+                        `📍 *Trajet* : ${encodeURIComponent(route)}%0A` +
+                        `📝 *Détails* : ${encodeURIComponent(message)}`;
 
-                    window.open(`https://wa.me/${phoneNumber}?text=${waText}`, '_blank');
+                    window.open(`https://wa.me/${phoneNumber}?text=${waText}`, '_blank', 'noopener,noreferrer');
                 }
 
-                // Réinitialiser le formulaire
                 contactForm.reset();
             }, 800);
         });
@@ -318,7 +333,5 @@ document.addEventListener('DOMContentLoaded', () => {
         cardObserver.observe(card);
     });
 
-    console.log('LivreXpress Lubumbashi - Plateforme prête et initialisée.');
+    console.log('LivreXpress Lubumbashi - Plateforme sécurisée et opérationnelle.');
 });
-
-
